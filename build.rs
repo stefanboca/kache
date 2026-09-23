@@ -46,6 +46,14 @@ fn main() {
     command.args(link_flags(
         encoded.split('\x1f').filter(|flag| !flag.is_empty()),
     ));
+    // rustc places the launcher's `#[link(name = "c")]` before its static
+    // runtime archives. On glibc, those archives can introduce libc references
+    // that ld.bfd's --as-needed handling cannot resolve backwards.
+    if std::env::var("CARGO_CFG_TARGET_OS").is_ok_and(|os| os == "linux")
+        && std::env::var("CARGO_CFG_TARGET_ENV").is_ok_and(|env| env == "gnu")
+    {
+        command.args(["-C", "link-arg=-lc"]);
+    }
 
     let status = command
         .status()
